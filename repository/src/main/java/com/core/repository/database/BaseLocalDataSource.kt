@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
  *
  */
 
-open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> internal constructor(
+open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constructor(
     private val db: daoObject,
     private val tableName: String
 ) :
