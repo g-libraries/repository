@@ -26,4 +26,29 @@ class DataSourceResponse<T> {
         result = body
         return this
     }
+
+
+    fun getResultSafe(
+        resultSuccessful: (T) -> Unit,
+        resultUnsuccessful: (DataSourceError) -> Unit,
+        resultIsNull: (Int) -> Unit,
+        errorIsNull: (Int) -> Unit
+    ) {
+        if (isSuccessful) {
+            result?.let {
+                resultSuccessful(it)
+            } ?: let {
+                //todo integrate base error
+                resultIsNull(-1)
+            }
+        } else {
+            error?.let {
+                resultUnsuccessful(it)
+            } ?: let {
+                //todo integrate base error
+                errorIsNull(-1)
+            }
+        }
+    }
 }
+
