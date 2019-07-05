@@ -6,3 +6,8 @@ class NoConnectivityException : IOException() {
     override val message: String
         get() = "No connectivity exception"
 }
+
+class ParseException : IOException() {
+    override val message: String
+        get() = "Parse exception"
+}
