@@ -3,6 +3,7 @@ package com.core.repository.network
 import android.content.Context
 import android.net.ConnectivityManager
 import com.core.repository.exceptions.NoConnectivityException
+import com.core.repository.exceptions.ParseException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -19,8 +20,11 @@ fun CoroutineScope.launchSafe(
 ) {
     val handler = CoroutineExceptionHandler { _, throwable ->
         //todo handle other exceptions
-        if (throwable is NoConnectivityException)
-            onError(throwable)
+        when (throwable) {
+            is NoConnectivityException -> onError(throwable)
+            is ParseException -> onError(throwable)
+            else -> onError(throwable)
+        }
     }
 
     launch(handler) {
