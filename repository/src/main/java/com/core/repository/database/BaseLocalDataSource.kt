@@ -23,7 +23,7 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
     private val db: daoObject,
     private val tableName: String
 ) :
-    DataSource<Entity> {
+    DataSource<Entity>() {
 
     override suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
         db.insertAll(list)

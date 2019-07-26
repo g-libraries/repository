@@ -12,19 +12,19 @@ import com.core.repository.repository.DataSourceResponse
  *
  */
 
-interface DataSource<T : Any> {
+abstract class DataSource<T : Any> {
 
-    suspend fun getAllAsync(): DataSourceResponse<List<T>>
+    abstract suspend fun getAllAsync(): DataSourceResponse<List<T>>
 
-    suspend fun getAllAsync(query: Query<T>): DataSourceResponse<List<T>>
+    abstract suspend fun getAllAsync(query: Query<T>): DataSourceResponse<List<T>>
 
-    suspend fun saveAll(list: List<T>)
+    abstract suspend fun saveAll(list: List<T>)
 
-    suspend fun save(item: T)
+    abstract suspend fun save(item: T)
 
-    suspend fun removeAll(list: List<T>)
+    abstract suspend fun removeAll(list: List<T>)
 
-    suspend fun remove(item: T)
+    abstract suspend fun remove(item: T)
 
     suspend fun query(): Query<T> {
         return Query(this)
