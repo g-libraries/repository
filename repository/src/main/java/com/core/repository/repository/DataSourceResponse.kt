@@ -12,13 +12,13 @@ class DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
             successful(responseAPI.body()!!)
         } else {
-            unSuccessful(responseAPI.code(), responseAPI.message())
+            unSuccessful(responseAPI.code(), responseAPI.message(), true)
         }
     }
 
-    fun unSuccessful(code: Int, message: String): DataSourceResponse<T> {
+    fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
         isSuccessful = false
-        error = DataSourceError(code, message)
+        error = DataSourceError(code, message, serverError)
         return this
     }
 
@@ -31,8 +31,8 @@ class DataSourceResponse<T> {
     fun getResultSafe(
         resultSuccessful: (T) -> Unit,
         resultUnsuccessful: (DataSourceError) -> Unit,
-        resultIsNull: (Int) -> Unit,
-        errorIsNull: (Int) -> Unit
+        resultIsNull: (Int) -> Unit = {},
+        errorIsNull: (Int) -> Unit = {}
     ) {
         if (isSuccessful) {
             result?.let {

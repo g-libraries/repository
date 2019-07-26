@@ -8,7 +8,7 @@ import com.core.repository.repository.DataSourceResponse
  *
  */
 
-open class BaseRemoteDataSource<T : Any> constructor() : DataSource<T>() {
+open class BaseRemoteDataSource<T : Any> constructor() : DataSource<T> {
     override suspend fun getAllAsync(): DataSourceResponse<List<T>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

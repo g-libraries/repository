@@ -23,7 +23,7 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
     private val db: daoObject,
     private val tableName: String
 ) :
-    DataSource<Entity>() {
+    DataSource<Entity> {
 
     override suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
         db.insertAll(list)
@@ -47,7 +47,7 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
         try {
             response.successful(db.rawQuery(sqlWhere(tableName, query().params)))
         } catch (e: EmptyResultSetException) {
-            response.unSuccessful(-1, e.message!!)
+            response.unSuccessful(-1, e.message!!, false)
         }
     }
 
@@ -58,7 +58,7 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
             try {
                 response.successful(db.rawQuery(sqlWhere(tableName, query().params)))
             } catch (e: EmptyResultSetException) {
-                response.unSuccessful(-1, e.message!!)
+                response.unSuccessful(-1, e.message!!, false)
             }
         }
 }
