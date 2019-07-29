@@ -107,7 +107,6 @@ open class Repository<Entity : Any>(
                     try {
                         localDataSource.getOneAsync().getResultSafe({
                             //  Data from local data source with server error
-
                             response.result = it
                         }, {
                             // No data available
