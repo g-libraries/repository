@@ -29,11 +29,11 @@ open class Repository<Entity : Any>(
 ) {
 
     suspend fun getAllAsync(): DataSourceResponse<List<Entity>> = withContext(Dispatchers.IO) {
-        obtainResultList(this)
+        obtainResultList()
     }
 
     suspend fun getOneAsync(): DataSourceResponse<Entity> = withContext(Dispatchers.IO) {
-        obtainResult(this)
+        obtainResult()
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
@@ -47,7 +47,7 @@ open class Repository<Entity : Any>(
     }
 
 
-    suspend fun obtainResultList(scope: CoroutineScope): DataSourceResponse<List<Entity>> = runBlocking {
+    suspend fun obtainResultList(): DataSourceResponse<List<Entity>> = runBlocking {
         var response = DataSourceResponse<List<Entity>>()
 
         fun handeDbError(throwable: Throwable) {
@@ -55,7 +55,7 @@ open class Repository<Entity : Any>(
         }
 
         fun requestToDB() {
-            scope.launchSafe(::handeDbError) {
+            launchSafe(::handeDbError) {
                 localDataSource.getAllAsync().getResultSafe({
                     //  Data from local data source with server error
 
@@ -74,11 +74,11 @@ open class Repository<Entity : Any>(
         }
 
 
-        scope.launchSafe(::handeInternalError) {
+        launchSafe(::handeInternalError) {
             response = remoteDataSource.getAllAsync()
 
             response.getResultSafe({
-                scope.launchSafe(::handeDbError) {
+                launchSafe(::handeDbError) {
                     localDataSource.saveAll(it)
                 }
             }, {
@@ -90,10 +90,10 @@ open class Repository<Entity : Any>(
             })
         }
 
-         response
+        response
     }
 
-    suspend fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> = runBlocking {
+    suspend fun obtainResult(): DataSourceResponse<Entity> = runBlocking {
         var response = DataSourceResponse<Entity>()
 
         fun handeDbError(throwable: Throwable) {
@@ -101,7 +101,7 @@ open class Repository<Entity : Any>(
         }
 
         fun requestToDB() {
-            scope.launchSafe(::handeDbError) {
+            launchSafe(::handeDbError) {
                 localDataSource.getOneAsync().getResultSafe({
                     //  Data from local data source with server error
 
@@ -119,11 +119,11 @@ open class Repository<Entity : Any>(
             requestToDB()
         }
 
-        scope.launchSafe(::handeInternalError) {
+        launchSafe(::handeInternalError) {
             response = remoteDataSource.getOneAsync()
 
             response.getResultSafe({
-                scope.launchSafe(::handeDbError) {
+                launchSafe(::handeDbError) {
                     localDataSource.save(it)
                 }
             }, {
