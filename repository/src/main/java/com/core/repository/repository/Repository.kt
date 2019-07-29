@@ -93,48 +93,51 @@ open class Repository<Entity : Any>(
         response
     }
 
-    suspend fun obtainResult(): DataSourceResponse<Entity> = runBlocking {
+    suspend fun obtainResult(): DataSourceResponse<Entity> {
         var response = DataSourceResponse<Entity>()
 
-        fun handeDbError(throwable: Throwable) {
-            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-        }
+        runBlocking {
+            fun handeDbError(throwable: Throwable) {
+                response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+            }
 
-        fun requestToDB() {
-            launchSafe(::handeDbError) {
-                localDataSource.getOneAsync().getResultSafe({
-                    //  Data from local data source with server error
+            fun requestToDB() {
+                launchSafe(::handeDbError) {
+                    localDataSource.getOneAsync().getResultSafe({
+                        //  Data from local data source with server error
 
-                    response.result = it
+                        response.result = it
+                    }, {
+                        // No data available
+                        response.result = null
+                    })
+                }
+            }
+
+            //Handle response obtain error
+            fun handeInternalError(throwable: Throwable) {
+                response.unSuccessful(-1, "response obtain error : ${throwable.message}", false)
+                requestToDB()
+            }
+
+            launchSafe(::handeInternalError) {
+                response = remoteDataSource.getOneAsync()
+
+                response.getResultSafe({
+                    launchSafe(::handeDbError) {
+                        localDataSource.save(it)
+                    }
                 }, {
-                    // No data available
-                    response.result = null
+                    requestToDB()
+                }, {
+                    requestToDB()
+                }, {
+                    requestToDB()
                 })
             }
+
+
         }
-
-        //Handle response obtain error
-        fun handeInternalError(throwable: Throwable) {
-            response.unSuccessful(-1, "response obtain error : ${throwable.message}", false)
-            requestToDB()
-        }
-
-        launchSafe(::handeInternalError) {
-            response = remoteDataSource.getOneAsync()
-
-            response.getResultSafe({
-                launchSafe(::handeDbError) {
-                    localDataSource.save(it)
-                }
-            }, {
-                requestToDB()
-            }, {
-                requestToDB()
-            }, {
-                requestToDB()
-            })
-        }
-
-        response
+        return response
     }
 }
