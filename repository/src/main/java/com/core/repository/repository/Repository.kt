@@ -2,10 +2,7 @@ package com.core.repository.repository
 
 import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import timber.log.Timber
 
 /**
@@ -50,7 +47,7 @@ open class Repository<Entity : Any>(
     }
 
 
-    fun obtainResultList(scope: CoroutineScope): DataSourceResponse<List<Entity>> {
+    suspend fun obtainResultList(scope: CoroutineScope): DataSourceResponse<List<Entity>> = runBlocking {
         var response = DataSourceResponse<List<Entity>>()
 
         fun handeDbError(throwable: Throwable) {
@@ -76,6 +73,7 @@ open class Repository<Entity : Any>(
             requestToDB()
         }
 
+
         scope.launchSafe(::handeInternalError) {
             response = remoteDataSource.getAllAsync()
 
@@ -92,11 +90,10 @@ open class Repository<Entity : Any>(
             })
         }
 
-        return response
+         response
     }
 
-
-    fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> {
+    suspend fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> = runBlocking {
         var response = DataSourceResponse<Entity>()
 
         fun handeDbError(throwable: Throwable) {
@@ -138,8 +135,6 @@ open class Repository<Entity : Any>(
             })
         }
 
-        return response
+        response
     }
-
-
 }
