@@ -32,53 +32,48 @@ open class Repository<Entity : Any>(
 ) {
 
     suspend fun getAllAsync(): DataSourceResponse<List<Entity>> = withContext(Dispatchers.IO) {
+        obtainResultList(this)
+    }
+
+    suspend fun getOneAsync(): DataSourceResponse<Entity> = withContext(Dispatchers.IO) {
         obtainResult(this)
     }
 
-//    /**
-//     * Сreating queries to database
-//     */
-//
-//    suspend fun getAllAsync(query: DataSource.Query<Entity>) = withContext(Dispatchers.IO) {
-//        obtainResult(this)
-//    }
-//
-//    suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
-//        //todo cache network logic
-//        localDataSource.saveAll(list)
-//    }
-//
-//
-//    suspend fun save(item: Entity) = withContext(Dispatchers.IO) {
-//        //todo cache network logic
-//        localDataSource.save(item)
-//    }
-//
-//    suspend fun removeAll(list: List<Entity>) = withContext(Dispatchers.IO) {
-//        //todo cache network logic
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//        null
-//    }
-//
-//    suspend fun remove(item: Entity) = withContext(Dispatchers.IO) {
-//        //todo cache network logic
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//        null
-//    }
+    suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
+        //todo cache network logic
+        localDataSource.saveAll(list)
+    }
+
+    suspend fun save(item: Entity) = withContext(Dispatchers.IO) {
+        //todo cache network logic
+        localDataSource.save(item)
+    }
 
 
-    fun obtainResult(scope: CoroutineScope): DataSourceResponse<List<Entity>> {
+    fun obtainResultList(scope: CoroutineScope): DataSourceResponse<List<Entity>> {
         var response = DataSourceResponse<List<Entity>>()
 
         fun handeDbError(throwable: Throwable) {
-            response.unSuccessful(-1, "dbError", false)
+            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+        }
+
+        fun requestToDB() {
+            scope.launchSafe(::handeDbError) {
+                localDataSource.getAllAsync().getResultSafe({
+                    //  Data from local data source with server error
+
+                    response.result = it
+                }, {
+                    // No data available
+                    response.result = null
+                })
+            }
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
-            scope.launchSafe(::handeDbError) {
-                response = localDataSource.getAllAsync()
-            }
+            response.unSuccessful(-1, "response obtain error : ${throwable.message}", false)
+            requestToDB()
         }
 
         scope.launchSafe(::handeInternalError) {
@@ -89,28 +84,62 @@ open class Repository<Entity : Any>(
                     localDataSource.saveAll(it)
                 }
             }, {
-                scope.launchSafe(::handeDbError) {
-                    localDataSource.getAllAsync().getResultSafe({
-                        //  Data from local data source with server error
-
-                        response.result = it
-                    }, {
-                        // No data available
-                        response.result = null
-                    })
-                }
+                requestToDB()
             }, {
-                scope.launchSafe(::handeDbError) {
-                    response = localDataSource.getAllAsync()
-                }
+                requestToDB()
             }, {
-                scope.launchSafe(::handeDbError) {
-                    response = localDataSource.getAllAsync()
-                }
+                requestToDB()
             })
         }
 
         return response
     }
+
+
+    fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> {
+        var response = DataSourceResponse<Entity>()
+
+        fun handeDbError(throwable: Throwable) {
+            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+        }
+
+        fun requestToDB() {
+            scope.launchSafe(::handeDbError) {
+                localDataSource.getOneAsync().getResultSafe({
+                    //  Data from local data source with server error
+
+                    response.result = it
+                }, {
+                    // No data available
+                    response.result = null
+                })
+            }
+        }
+
+        //Handle response obtain error
+        fun handeInternalError(throwable: Throwable) {
+            response.unSuccessful(-1, "response obtain error : ${throwable.message}", false)
+            requestToDB()
+        }
+
+        scope.launchSafe(::handeInternalError) {
+            response = remoteDataSource.getOneAsync()
+
+            response.getResultSafe({
+                scope.launchSafe(::handeDbError) {
+                    localDataSource.save(it)
+                }
+            }, {
+                requestToDB()
+            }, {
+                requestToDB()
+            }, {
+                requestToDB()
+            })
+        }
+
+        return response
+    }
+
 
 }

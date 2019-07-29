@@ -29,6 +29,7 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
         db.insertAll(list)
     }
 
+
     override suspend fun save(item: Entity) = withContext(Dispatchers.IO) {
         db.insert(item)
     }
@@ -61,4 +62,14 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
                 response.unSuccessful(-1, e.message!!, false)
             }
         }
+
+    override suspend fun getOneAsync(): DataSourceResponse<Entity> = withContext(Dispatchers.IO) {
+        val response = DataSourceResponse<Entity>()
+
+        try {
+            response.successful(db.rawQuery(sqlWhere(tableName, query().params)).last())
+        } catch (e: EmptyResultSetException) {
+            response.unSuccessful(-1, e.message!!, false)
+        }
+    }
 }

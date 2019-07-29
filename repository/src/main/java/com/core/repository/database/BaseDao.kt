@@ -31,4 +31,7 @@ interface BaseDao<T : Any> {
 
     @RawQuery
     fun rawQuery(query: SupportSQLiteQuery): List<T>
+
+    @RawQuery
+    fun rawOneQuery(query: SupportSQLiteQuery): T
 }

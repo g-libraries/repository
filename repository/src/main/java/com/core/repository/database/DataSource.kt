@@ -16,6 +16,9 @@ interface DataSource<T : Any> {
 
     suspend fun getAllAsync(): DataSourceResponse<List<T>>
 
+
+    suspend fun getOneAsync(): DataSourceResponse<T>
+
     suspend fun getAllAsync(query: Query<T>): DataSourceResponse<List<T>>
 
     suspend fun saveAll(list: List<T>)
