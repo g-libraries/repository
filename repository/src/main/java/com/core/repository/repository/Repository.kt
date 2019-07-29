@@ -4,6 +4,7 @@ import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
 import kotlinx.coroutines.*
 import timber.log.Timber
+import java.lang.Exception
 
 /**
  *
@@ -33,7 +34,7 @@ open class Repository<Entity : Any>(
     }
 
     suspend fun getOneAsync(): DataSourceResponse<Entity> = withContext(Dispatchers.IO) {
-        obtainResult()
+        obtainResult(this)
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
@@ -93,7 +94,7 @@ open class Repository<Entity : Any>(
         response
     }
 
-    suspend fun obtainResult(): DataSourceResponse<Entity> {
+    suspend fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> {
         var response = DataSourceResponse<Entity>()
 
         runBlocking {
@@ -103,14 +104,18 @@ open class Repository<Entity : Any>(
 
             fun requestToDB() {
                 launchSafe(::handeDbError) {
-                    localDataSource.getOneAsync().getResultSafe({
-                        //  Data from local data source with server error
+                    try {
+                        localDataSource.getOneAsync().getResultSafe({
+                            //  Data from local data source with server error
 
-                        response.result = it
-                    }, {
-                        // No data available
-                        response.result = null
-                    })
+                            response.result = it
+                        }, {
+                            // No data available
+                            response.result = null
+                        })
+                    } catch (e: Exception) {
+                        handeDbError(e)
+                    }
                 }
             }
 
@@ -120,12 +125,16 @@ open class Repository<Entity : Any>(
                 requestToDB()
             }
 
-            launchSafe(::handeInternalError) {
+            try {
                 response = remoteDataSource.getOneAsync()
 
                 response.getResultSafe({
                     launchSafe(::handeDbError) {
-                        localDataSource.save(it)
+                        try {
+                            localDataSource.save(it)
+                        } catch (e: Exception) {
+                            handeDbError(e)
+                        }
                     }
                 }, {
                     requestToDB()
@@ -134,9 +143,9 @@ open class Repository<Entity : Any>(
                 }, {
                     requestToDB()
                 })
+            } catch (e: Exception) {
+                handeInternalError(e)
             }
-
-
         }
         return response
     }
