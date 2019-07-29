@@ -70,7 +70,7 @@ open class Repository<Entity : Any>(
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
-            response.unSuccessful(-1, "response obtain error : ${throwable.message}", false)
+            response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
             requestToDB()
         }
 
