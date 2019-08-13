@@ -4,11 +4,19 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
+import io.reactivex.Flowable
+import io.reactivex.Observable
+import io.reactivex.Single
+import io.reactivex.subjects.PublishSubject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import org.intellij.lang.annotations.Flow
+import org.w3c.dom.Entity
 import timber.log.Timber
 import java.lang.Exception
+import java.util.function.Consumer
+import java.util.function.Function
 
 /**
  *
@@ -32,94 +40,93 @@ open class Repository<Entity : Any>(
     private val remoteDataSource: DataSource<Entity>,
     private val localDataSource: DataSource<Entity>
 ) {
-
-    suspend fun getAllAsync(): MutableLiveData<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
+    suspend fun getAllAsync(): PublishSubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
+        val subject = PublishSubject.create<DataSourceResponse<List<Entity>>>()
         var response = DataSourceResponse<List<Entity>>()
-
-        val remoteDataSource = MutableLiveData<DataSourceResponse<List<Entity>>>()
-        val localDataSource = MutableLiveData<DataSourceResponse<List<Entity>>>()
-
-        val merger = MediatorLiveData<DataSourceResponse<List<Entity>>>()
-
-        merger.addSource(remoteDataSource) { postedValue -> merger.postValue(postedValue) }
-        merger.addSource(localDataSource) { postedValue -> merger.postValue(postedValue) }
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            localDataSource.postValue(response)
+            subject.onNext(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            remoteDataSource.postValue(response)
+            subject.onNext(response)
         }
 
         fun makeRequest() {
             launchSafe(::handeInternalError) {
-                response = this@Repository.remoteDataSource.getAllAsync()
+                try {
+                    response = this@Repository.remoteDataSource.getAllAsync()
 
-                response.getResultSafe({
-                    localDataSource.postValue(response)
-                    merger.removeSource(localDataSource)
-                    launchSafe(::handeDbError) {
-                        this@Repository.localDataSource.saveAll(it)
-                    }
-                }, {
-                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                    remoteDataSource.postValue(response)
-                })
+                    response.getResultSafe({
+                        subject.onNext(response)
+                        subject.onComplete()
+                        launchSafe(::handeDbError) {
+                            try {
+                                this@Repository.localDataSource.saveAll(it)
+                            } catch (e: Exception) {
+                                handeDbError(e)
+                            }
+                        }
+                    }, {
+                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        subject.onNext(response)
+                        subject.onComplete()
+                    })
+                } catch (e: Exception) {
+                    handeInternalError(e)
+                }
             }
         }
 
         launchSafe(::handeDbError) {
-            this@Repository.localDataSource.getAllAsync().getResultSafe({
-                //  Data from local data source with server error
-                response.result = it
-                localDataSource.postValue(response)
-            }, {
-                // No data available
-                response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                localDataSource.postValue(response)
-            })
+            try {
+                this@Repository.localDataSource.getAllAsync().getResultSafe({
+                    //  Data from local data source with server error
+                    response.result = it
+                    subject.onNext(response)
+                }, {
+                    // No data available
+                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                    subject.onNext(response)
+                })
+            } catch (e: Exception) {
+                handeDbError(e)
+            }
         }
 
         makeRequest()
 
-        merger
+        subject
     }
 
-    suspend fun getOneAsync(): MutableLiveData<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
+    suspend fun getOneAsync(): PublishSubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
+        val subject = PublishSubject.create<DataSourceResponse<Entity>>()
         var response = DataSourceResponse<Entity>()
-
-        val remoteDataSource = MutableLiveData<DataSourceResponse<Entity>>()
-        val localDataSource = MutableLiveData<DataSourceResponse<Entity>>()
-
-        val merger = MediatorLiveData<DataSourceResponse<Entity>>()
-
-        merger.addSource(remoteDataSource) { postedValue -> merger.postValue(postedValue) }
-        merger.addSource(localDataSource) { postedValue -> merger.postValue(postedValue) }
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            localDataSource.postValue(response)
+            subject.onNext(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            remoteDataSource.postValue(response)
+            subject.onNext(response)
         }
 
         fun makeRequest() {
-            try {
-                launchSafe(::handeInternalError) {
+            launchSafe(::handeInternalError) {
+                try {
                     response = this@Repository.remoteDataSource.getOneAsync()
 
                     response.getResultSafe({
-                        localDataSource.postValue(response)
+                        subject.onNext(response)
+                        subject.onComplete()
                         launchSafe(::handeDbError) {
                             try {
                                 this@Repository.localDataSource.save(it)
@@ -129,11 +136,12 @@ open class Repository<Entity : Any>(
                         }
                     }, {
                         response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                        remoteDataSource.postValue(response)
+                        subject.onNext(response)
+                        subject.onComplete()
                     })
+                } catch (e: Exception) {
+                    handeInternalError(e)
                 }
-            } catch (e: Exception) {
-                handeInternalError(e)
             }
         }
 
@@ -142,11 +150,11 @@ open class Repository<Entity : Any>(
                 this@Repository.localDataSource.getOneAsync().getResultSafe({
                     //  Data from local data source with server error
                     response.result = it
-                    localDataSource.postValue(response)
+                    subject.onNext(response)
                 }, {
                     // No data available
                     response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                    localDataSource.postValue(response)
+                    subject.onNext(response)
                 })
             } catch (e: Exception) {
                 handeDbError(e)
@@ -155,7 +163,7 @@ open class Repository<Entity : Any>(
 
         makeRequest()
 
-        merger
+        subject
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
