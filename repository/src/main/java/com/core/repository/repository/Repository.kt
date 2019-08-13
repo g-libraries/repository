@@ -44,6 +44,8 @@ open class Repository<Entity : Any>(
         val subject = PublishSubject.create<DataSourceResponse<List<Entity>>>()
         var response = DataSourceResponse<List<Entity>>()
 
+        subject.toSerialized()
+
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
@@ -106,6 +108,8 @@ open class Repository<Entity : Any>(
     suspend fun getOneAsync(): PublishSubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
         val subject = PublishSubject.create<DataSourceResponse<Entity>>()
         var response = DataSourceResponse<Entity>()
+
+        subject.toSerialized()
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
