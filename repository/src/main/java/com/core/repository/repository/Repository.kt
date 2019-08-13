@@ -42,8 +42,8 @@ open class Repository<Entity : Any>(
     private val remoteDataSource: DataSource<Entity>,
     private val localDataSource: DataSource<Entity>
 ) {
-    suspend fun getAllAsync(): BehaviorSubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
-        val subject = BehaviorSubject.create<DataSourceResponse<List<Entity>>>()
+    suspend fun getAllAsync(): ReplaySubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
+        val subject = ReplaySubject.create<DataSourceResponse<List<Entity>>>()
         var response = DataSourceResponse<List<Entity>>()
 
         subject.toSerialized()
@@ -107,8 +107,8 @@ open class Repository<Entity : Any>(
         subject
     }
 
-    suspend fun getOneAsync(): BehaviorSubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
-        val subject = BehaviorSubject.create<DataSourceResponse<Entity>>()
+    suspend fun getOneAsync(): ReplaySubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
+        val subject = ReplaySubject.create<DataSourceResponse<Entity>>()
         var response = DataSourceResponse<Entity>()
 
         subject.toSerialized()
