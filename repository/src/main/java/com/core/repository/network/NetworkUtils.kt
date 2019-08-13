@@ -6,6 +6,7 @@ import com.core.repository.exceptions.NoConnectivityException
 import com.core.repository.exceptions.ParseException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 fun isOnline(context: Context): Boolean {
@@ -17,7 +18,7 @@ fun isOnline(context: Context): Boolean {
 fun CoroutineScope.launchSafe(
     onError: (Throwable) -> Unit = {},
     onSuccess: suspend () -> Unit
-) {
+): Job {
     val handler = CoroutineExceptionHandler { _, throwable ->
         //todo handle other exceptions
         when (throwable) {
@@ -27,7 +28,7 @@ fun CoroutineScope.launchSafe(
         }
     }
 
-    launch(handler) {
+    return launch(handler) {
         onSuccess()
     }
 }

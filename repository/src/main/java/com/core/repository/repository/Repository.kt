@@ -114,49 +114,43 @@ open class Repository<Entity : Any>(
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
         }
 
-        runBlocking {
-            fun makeRequest() {
-                launchSafe(::handeInternalError) {
-                    try {
-                        response = this@Repository.remoteDataSource.getOneAsync()
+        launchSafe(::handeDbError) {
+            try {
+                this@Repository.localDataSource.getOneAsync().getResultSafe({
+                    //  Data from local data source with server error
+                    response.result = it
+                }, {
+                    // No data available
+                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                })
+            } catch (e: Exception) {
+                handeDbError(e)
+            }
+        }.join()
 
-                        response.getResultSafe({
-                            launchSafe(::handeDbError) {
-                                try {
-                                    this@Repository.localDataSource.save(it)
-                                } catch (e: Exception) {
-                                    handeDbError(e)
-                                }
-                            }
-                        }, {
-                            response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                        })
-                    } catch (e: Exception) {
-                        handeInternalError(e)
+        send(response)
+
+        launchSafe(::handeInternalError) {
+            try {
+                response = this@Repository.remoteDataSource.getOneAsync()
+
+                response.getResultSafe({
+                    launchSafe(::handeDbError) {
+                        try {
+                            this@Repository.localDataSource.save(it)
+                        } catch (e: Exception) {
+                            handeDbError(e)
+                        }
                     }
-                }
+                }, {
+                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                })
+            } catch (e: Exception) {
+                handeInternalError(e)
             }
+        }.join()
 
-            launchSafe(::handeDbError) {
-                try {
-                    this@Repository.localDataSource.getOneAsync().getResultSafe({
-                        //  Data from local data source with server error
-                        response.result = it
-                    }, {
-                        // No data available
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                    })
-                } catch (e: Exception) {
-                    handeDbError(e)
-                }
-            }
-
-            send(response)
-
-            makeRequest()
-
-            send(response)
-        }
+        send(response)
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
