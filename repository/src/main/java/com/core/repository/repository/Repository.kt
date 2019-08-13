@@ -120,7 +120,6 @@ open class Repository<Entity : Any>(
 
                     response.getResultSafe({
                         localDataSource.postValue(response)
-                        merger.removeSource(localDataSource)
                         launchSafe(::handeDbError) {
                             try {
                                 this@Repository.localDataSource.save(it)
