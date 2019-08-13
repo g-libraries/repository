@@ -46,7 +46,6 @@ open class Repository<Entity : Any>(
         val subject = ReplaySubject.create<DataSourceResponse<List<Entity>>>()
         var response = DataSourceResponse<List<Entity>>()
 
-        subject.toSerialized()
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
@@ -110,8 +109,6 @@ open class Repository<Entity : Any>(
     suspend fun getOneAsync(): ReplaySubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
         val subject = ReplaySubject.create<DataSourceResponse<Entity>>()
         var response = DataSourceResponse<Entity>()
-
-        subject.toSerialized()
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
