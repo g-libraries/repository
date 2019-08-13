@@ -1,8 +1,12 @@
 package com.core.repository.repository
 
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.MutableLiveData
 import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
 import timber.log.Timber
 import java.lang.Exception
 
@@ -29,12 +33,130 @@ open class Repository<Entity : Any>(
     private val localDataSource: DataSource<Entity>
 ) {
 
-    suspend fun getAllAsync(): DataSourceResponse<List<Entity>> = withContext(Dispatchers.IO) {
-        obtainResultList()
+    suspend fun getAllAsync(): MutableLiveData<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
+        var response = DataSourceResponse<List<Entity>>()
+
+        val remoteDataSource = MutableLiveData<DataSourceResponse<List<Entity>>>()
+        val localDataSource = MutableLiveData<DataSourceResponse<List<Entity>>>()
+
+        val merger = MediatorLiveData<DataSourceResponse<List<Entity>>>()
+
+        merger.addSource(remoteDataSource) { postedValue -> merger.postValue(postedValue) }
+        merger.addSource(localDataSource) { postedValue -> merger.postValue(postedValue) }
+
+        //Handle db error
+        fun handeDbError(throwable: Throwable) {
+            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+            localDataSource.value = response
+        }
+
+        //Handle response obtain error
+        fun handeInternalError(throwable: Throwable) {
+            response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
+            remoteDataSource.value = response
+        }
+
+        fun makeRequest() {
+            launchSafe(::handeInternalError) {
+                response = this@Repository.remoteDataSource.getAllAsync()
+
+                response.getResultSafe({
+                    localDataSource.value = response
+                    merger.removeSource(localDataSource)
+                    launchSafe(::handeDbError) {
+                        this@Repository.localDataSource.saveAll(it)
+                    }
+                }, {
+                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                    remoteDataSource.value = response
+                })
+            }
+        }
+
+        launchSafe(::handeDbError) {
+            this@Repository.localDataSource.getAllAsync().getResultSafe({
+                //  Data from local data source with server error
+                response.result = it
+                localDataSource.value = response
+            }, {
+                // No data available
+                response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                localDataSource.value = response
+            })
+        }
+
+        makeRequest()
+
+        merger
     }
 
-    suspend fun getOneAsync(): DataSourceResponse<Entity> = withContext(Dispatchers.IO) {
-        obtainResult(this)
+    suspend fun getOneAsync(): MutableLiveData<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
+        var response = DataSourceResponse<Entity>()
+
+        val remoteDataSource = MutableLiveData<DataSourceResponse<Entity>>()
+        val localDataSource = MutableLiveData<DataSourceResponse<Entity>>()
+
+        val merger = MediatorLiveData<DataSourceResponse<Entity>>()
+
+        merger.addSource(remoteDataSource) { postedValue -> merger.postValue(postedValue) }
+        merger.addSource(localDataSource) { postedValue -> merger.postValue(postedValue) }
+
+        //Handle db error
+        fun handeDbError(throwable: Throwable) {
+            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+            localDataSource.value = response
+        }
+
+        //Handle response obtain error
+        fun handeInternalError(throwable: Throwable) {
+            response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
+            remoteDataSource.value = response
+        }
+
+        fun makeRequest() {
+            try {
+                launchSafe(::handeInternalError) {
+                    response = this@Repository.remoteDataSource.getOneAsync()
+
+                    response.getResultSafe({
+                        localDataSource.value = response
+                        merger.removeSource(localDataSource)
+                        launchSafe(::handeDbError) {
+                            try {
+                                this@Repository.localDataSource.save(it)
+                            } catch (e: Exception) {
+                                handeDbError(e)
+                            }
+                        }
+                    }, {
+                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        remoteDataSource.value = response
+                    })
+                }
+            } catch (e: Exception) {
+                handeInternalError(e)
+            }
+        }
+
+        launchSafe(::handeDbError) {
+            try {
+                this@Repository.localDataSource.getOneAsync().getResultSafe({
+                    //  Data from local data source with server error
+                    response.result = it
+                    localDataSource.value = response
+                }, {
+                    // No data available
+                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                    localDataSource.value = response
+                })
+            } catch (e: Exception) {
+                handeDbError(e)
+            }
+        }
+
+        makeRequest()
+
+        merger
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
@@ -47,104 +169,4 @@ open class Repository<Entity : Any>(
         localDataSource.save(item)
     }
 
-
-    suspend fun obtainResultList(): DataSourceResponse<List<Entity>> = runBlocking {
-        var response = DataSourceResponse<List<Entity>>()
-
-        fun handeDbError(throwable: Throwable) {
-            response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-        }
-
-        fun requestToDB() {
-            launchSafe(::handeDbError) {
-                localDataSource.getAllAsync().getResultSafe({
-                    //  Data from local data source with server error
-
-                    response.result = it
-                }, {
-                    // No data available
-                    response.result = null
-                })
-            }
-        }
-
-        //Handle response obtain error
-        fun handeInternalError(throwable: Throwable) {
-            response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            requestToDB()
-        }
-
-        launchSafe(::handeInternalError) {
-            response = remoteDataSource.getAllAsync()
-
-            response.getResultSafe({
-                launchSafe(::handeDbError) {
-                    localDataSource.saveAll(it)
-                }
-            }, {
-                requestToDB()
-            }, {
-                requestToDB()
-            }, {
-                requestToDB()
-            })
-        }
-
-        response
-    }
-
-    suspend fun obtainResult(scope: CoroutineScope): DataSourceResponse<Entity> {
-        var response = DataSourceResponse<Entity>()
-
-        runBlocking {
-            fun handeDbError(throwable: Throwable) {
-                response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            }
-
-            fun requestToDB() {
-                launchSafe(::handeDbError) {
-                    try {
-                        localDataSource.getOneAsync().getResultSafe({
-                            //  Data from local data source with server error
-                            response.result = it
-                        }, {
-                            // No data available
-                            response.result = null
-                        })
-                    } catch (e: Exception) {
-                        handeDbError(e)
-                    }
-                }
-            }
-
-            //Handle response obtain error
-            fun handeInternalError(throwable: Throwable) {
-                response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-                requestToDB()
-            }
-
-            try {
-                response = remoteDataSource.getOneAsync()
-
-                response.getResultSafe({
-                    launchSafe(::handeDbError) {
-                        try {
-                            localDataSource.save(it)
-                        } catch (e: Exception) {
-                            handeDbError(e)
-                        }
-                    }
-                }, {
-                    requestToDB()
-                }, {
-                    requestToDB()
-                }, {
-                    requestToDB()
-                })
-            } catch (e: Exception) {
-                handeInternalError(e)
-            }
-        }
-        return response
-    }
 }
