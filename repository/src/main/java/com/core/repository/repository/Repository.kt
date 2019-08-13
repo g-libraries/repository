@@ -7,7 +7,9 @@ import com.core.repository.network.launchSafe
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.Single
+import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
+import io.reactivex.subjects.ReplaySubject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
@@ -40,8 +42,8 @@ open class Repository<Entity : Any>(
     private val remoteDataSource: DataSource<Entity>,
     private val localDataSource: DataSource<Entity>
 ) {
-    suspend fun getAllAsync(): PublishSubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
-        val subject = PublishSubject.create<DataSourceResponse<List<Entity>>>()
+    suspend fun getAllAsync(): BehaviorSubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
+        val subject = BehaviorSubject.create<DataSourceResponse<List<Entity>>>()
         var response = DataSourceResponse<List<Entity>>()
 
         subject.toSerialized()
@@ -105,8 +107,8 @@ open class Repository<Entity : Any>(
         subject
     }
 
-    suspend fun getOneAsync(): PublishSubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
-        val subject = PublishSubject.create<DataSourceResponse<Entity>>()
+    suspend fun getOneAsync(): BehaviorSubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
+        val subject = BehaviorSubject.create<DataSourceResponse<Entity>>()
         var response = DataSourceResponse<Entity>()
 
         subject.toSerialized()
