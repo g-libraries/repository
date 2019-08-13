@@ -37,136 +37,126 @@ import java.util.function.Function
  *
  */
 
-
+@Suppress("EXPERIMENTAL_API_USAGE")
 open class Repository<Entity : Any>(
     private val remoteDataSource: DataSource<Entity>,
     private val localDataSource: DataSource<Entity>
 ) {
-    suspend fun getAllAsync(): ReplaySubject<DataSourceResponse<List<Entity>>> = withContext(Dispatchers.IO) {
-        val subject = ReplaySubject.create<DataSourceResponse<List<Entity>>>()
+    suspend fun getAllAsync(scope: CoroutineScope): ReceiveChannel<DataSourceResponse<List<Entity>>> = scope.produce {
         var response = DataSourceResponse<List<Entity>>()
-
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            subject.onNext(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            subject.onNext(response)
         }
+        runBlocking {
+            fun makeRequest() {
+                launchSafe(::handeInternalError) {
+                    try {
+                        response = this@Repository.remoteDataSource.getAllAsync()
 
-        fun makeRequest() {
-            launchSafe(::handeInternalError) {
-                try {
-                    response = this@Repository.remoteDataSource.getAllAsync()
-
-                    response.getResultSafe({
-                        subject.onNext(response)
-                        subject.onComplete()
-                        launchSafe(::handeDbError) {
-                            try {
-                                this@Repository.localDataSource.saveAll(it)
-                            } catch (e: Exception) {
-                                handeDbError(e)
+                        response.getResultSafe({
+                            launchSafe(::handeDbError) {
+                                try {
+                                    this@Repository.localDataSource.saveAll(it)
+                                } catch (e: Exception) {
+                                    handeDbError(e)
+                                }
                             }
-                        }
-                    }, {
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                        subject.onNext(response)
-                        subject.onComplete()
-                    })
-                } catch (e: Exception) {
-                    handeInternalError(e)
+                        }, {
+                            response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        })
+                    } catch (e: Exception) {
+                        handeInternalError(e)
+                    }
                 }
             }
-        }
 
-        launchSafe(::handeDbError) {
-            try {
-                this@Repository.localDataSource.getAllAsync().getResultSafe({
-                    //  Data from local data source with server error
-                    response.result = it
-                    subject.onNext(response)
-                }, {
-                    // No data available
-                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                    subject.onNext(response)
-                })
-            } catch (e: Exception) {
-                handeDbError(e)
+            launchSafe(::handeDbError) {
+                try {
+                    this@Repository.localDataSource.getAllAsync().getResultSafe({
+                        //  Data from local data source with server error
+                        response.result = it
+
+                    }, {
+                        // No data available
+                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                    })
+                } catch (e: Exception) {
+                    handeDbError(e)
+                }
             }
+
+            send(response)
+
+            makeRequest()
+
+            send(response)
         }
-
-        makeRequest()
-
-        subject
     }
 
-    suspend fun getOneAsync(): ReplaySubject<DataSourceResponse<Entity>> = withContext(Dispatchers.IO) {
-        val subject = ReplaySubject.create<DataSourceResponse<Entity>>()
+
+    suspend fun getOneAsync(scope: CoroutineScope): ReceiveChannel<DataSourceResponse<Entity>> = scope.produce {
         var response = DataSourceResponse<Entity>()
 
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            subject.onNext(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            subject.onNext(response)
         }
 
-        fun makeRequest() {
-            launchSafe(::handeInternalError) {
-                try {
-                    response = this@Repository.remoteDataSource.getOneAsync()
+        runBlocking {
+            fun makeRequest() {
+                launchSafe(::handeInternalError) {
+                    try {
+                        response = this@Repository.remoteDataSource.getOneAsync()
 
-                    response.getResultSafe({
-                        subject.onNext(response)
-                        subject.onComplete()
-                        launchSafe(::handeDbError) {
-                            try {
-                                this@Repository.localDataSource.save(it)
-                            } catch (e: Exception) {
-                                handeDbError(e)
+                        response.getResultSafe({
+                            launchSafe(::handeDbError) {
+                                try {
+                                    this@Repository.localDataSource.save(it)
+                                } catch (e: Exception) {
+                                    handeDbError(e)
+                                }
                             }
-                        }
-                    }, {
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                        subject.onNext(response)
-                        subject.onComplete()
-                    })
-                } catch (e: Exception) {
-                    handeInternalError(e)
+                        }, {
+                            response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        })
+                    } catch (e: Exception) {
+                        handeInternalError(e)
+                    }
                 }
             }
-        }
 
-        launchSafe(::handeDbError) {
-            try {
-                this@Repository.localDataSource.getOneAsync().getResultSafe({
-                    //  Data from local data source with server error
-                    response.result = it
-                    subject.onNext(response)
-                }, {
-                    // No data available
-                    response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                    subject.onNext(response)
-                })
-            } catch (e: Exception) {
-                handeDbError(e)
+            launchSafe(::handeDbError) {
+                try {
+                    this@Repository.localDataSource.getOneAsync().getResultSafe({
+                        //  Data from local data source with server error
+                        response.result = it
+                    }, {
+                        // No data available
+                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                    })
+                } catch (e: Exception) {
+                    handeDbError(e)
+                }
             }
+
+            send(response)
+
+            makeRequest()
+
+            send(response)
         }
-
-        makeRequest()
-
-        subject
     }
 
     suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
