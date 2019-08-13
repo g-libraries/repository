@@ -47,13 +47,13 @@ open class Repository<Entity : Any>(
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            localDataSource.value = response
+            localDataSource.postValue(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            remoteDataSource.value = response
+            remoteDataSource.postValue(response)
         }
 
         fun makeRequest() {
@@ -61,14 +61,14 @@ open class Repository<Entity : Any>(
                 response = this@Repository.remoteDataSource.getAllAsync()
 
                 response.getResultSafe({
-                    localDataSource.value = response
+                    localDataSource.postValue(response)
                     merger.removeSource(localDataSource)
                     launchSafe(::handeDbError) {
                         this@Repository.localDataSource.saveAll(it)
                     }
                 }, {
                     response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                    remoteDataSource.value = response
+                    remoteDataSource.postValue(response)
                 })
             }
         }
@@ -77,11 +77,11 @@ open class Repository<Entity : Any>(
             this@Repository.localDataSource.getAllAsync().getResultSafe({
                 //  Data from local data source with server error
                 response.result = it
-                localDataSource.value = response
+                localDataSource.postValue(response)
             }, {
                 // No data available
                 response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                localDataSource.value = response
+                localDataSource.postValue(response)
             })
         }
 
@@ -104,13 +104,13 @@ open class Repository<Entity : Any>(
         //Handle db error
         fun handeDbError(throwable: Throwable) {
             response.unSuccessful(-1, "dbError : ${throwable.message}", false)
-            localDataSource.value = response
+            localDataSource.postValue(response)
         }
 
         //Handle response obtain error
         fun handeInternalError(throwable: Throwable) {
             response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
-            remoteDataSource.value = response
+            remoteDataSource.postValue(response)
         }
 
         fun makeRequest() {
@@ -119,7 +119,7 @@ open class Repository<Entity : Any>(
                     response = this@Repository.remoteDataSource.getOneAsync()
 
                     response.getResultSafe({
-                        localDataSource.value = response
+                        localDataSource.postValue(response)
                         merger.removeSource(localDataSource)
                         launchSafe(::handeDbError) {
                             try {
@@ -130,7 +130,7 @@ open class Repository<Entity : Any>(
                         }
                     }, {
                         response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
-                        remoteDataSource.value = response
+                        remoteDataSource.postValue(response)
                     })
                 }
             } catch (e: Exception) {
@@ -143,11 +143,11 @@ open class Repository<Entity : Any>(
                 this@Repository.localDataSource.getOneAsync().getResultSafe({
                     //  Data from local data source with server error
                     response.result = it
-                    localDataSource.value = response
+                    localDataSource.postValue(response)
                 }, {
                     // No data available
                     response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
-                    localDataSource.value = response
+                    localDataSource.postValue(response)
                 })
             } catch (e: Exception) {
                 handeDbError(e)
