@@ -4,6 +4,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
+import com.core.repository.repository.DataSourceResponse
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.Single
@@ -63,7 +64,7 @@ open class Repository<Entity : Any>(
                         response.getResultSafe({
                             launchSafe(::handeDbError) {
                                 try {
-                                    this@Repository.localDataSource.saveAll(it)
+                                    this@Repository.localDataSource.saveAll(it.result!!)
                                 } catch (e: Exception) {
                                     handeDbError(e)
                                 }
@@ -81,7 +82,7 @@ open class Repository<Entity : Any>(
                 try {
                     this@Repository.localDataSource.getAllAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response.result = it
+                        response.result = it.result
 
                     }, {
                         // No data available
@@ -118,7 +119,7 @@ open class Repository<Entity : Any>(
             try {
                 this@Repository.localDataSource.getOneAsync().getResultSafe({
                     //  Data from local data source with server error
-                    response.result = it
+                    response.result = it.result
                 }, {
                     // No data available
                     response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
@@ -137,7 +138,7 @@ open class Repository<Entity : Any>(
                 response.getResultSafe({
                     launchSafe(::handeDbError) {
                         try {
-                            this@Repository.localDataSource.save(it)
+                            this@Repository.localDataSource.save(it.result!!)
                         } catch (e: Exception) {
                             handeDbError(e)
                         }
