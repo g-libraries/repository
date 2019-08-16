@@ -8,8 +8,8 @@ class ResponseErrorLiveData<T> : MutableLiveData<DataSourceError<T>>() {
     fun observe(
         owner: LifecycleOwner,
         error: (String) -> Unit,
-        serverError: (Int) -> Unit,
-        internalError: (Throwable) -> Unit
+        serverError: (Int) -> Unit = {},
+        internalError: (Throwable) -> Unit = {}
     ) {
         super.observe(owner, ResponseErrorObserver(error, serverError, internalError))
     }
