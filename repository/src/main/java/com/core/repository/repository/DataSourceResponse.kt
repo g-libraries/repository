@@ -6,7 +6,7 @@ import retrofit2.Response
 class DataSourceResponse<T> {
     var result: T? = null
     var isSuccessful: Boolean = true
-    var error: DataSourceError? = null
+    var error: DataSourceError<T>? = null
 
     fun convertToDataSource(responseAPI: Response<T>): DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
@@ -30,24 +30,18 @@ class DataSourceResponse<T> {
 
     fun getResultSafe(
         resultSuccessful: (T) -> Unit,
-        resultUnsuccessful: (DataSourceError) -> Unit,
+        resultUnsuccessful: (DataSourceError<T>) -> Unit,
         resultIsNull: (Int) -> Unit = {},
         errorIsNull: (Int) -> Unit = {}
     ) {
         if (isSuccessful) {
             result?.let {
                 resultSuccessful(it)
-            } ?: let {
-                //todo integrate base error
-                resultIsNull(-1)
-            }
+            } ?: resultIsNull(-1)
         } else {
             error?.let {
                 resultUnsuccessful(it)
-            } ?: let {
-                //todo integrate base error
-                errorIsNull(-1)
-            }
+            } ?: errorIsNull(-1)
         }
     }
 }
