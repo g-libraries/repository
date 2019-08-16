@@ -18,7 +18,7 @@ class DataSourceResponse<T> {
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
         isSuccessful = false
-        error = DataSourceError(code, message, serverError)
+        error = DataSourceError(code, message, serverError, null)
         return this
     }
 
@@ -26,7 +26,6 @@ class DataSourceResponse<T> {
         result = body
         return this
     }
-
 
     fun getResultSafe(
         resultSuccessful: (T) -> Unit,
@@ -45,4 +44,3 @@ class DataSourceResponse<T> {
         }
     }
 }
-
