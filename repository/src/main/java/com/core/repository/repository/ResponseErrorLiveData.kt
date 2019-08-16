@@ -17,8 +17,8 @@ class ResponseErrorLiveData<T> : MutableLiveData<DataSourceError<T>>() {
 
 class ResponseErrorObserver<T>(
     val error: (String) -> Unit,
-    val serverError: (Int) -> Unit,
-    val internalError: (Throwable) -> Unit
+    val serverError: (Int) -> Unit = {},
+    val internalError: (Throwable) -> Unit = {}
 ) : Observer<DataSourceError<T>> {
     override fun onChanged(t: DataSourceError<T>) {
         if (t.serverError) {
