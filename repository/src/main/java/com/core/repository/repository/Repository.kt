@@ -158,6 +158,16 @@ open class Repository<Entity : Any>(
         localDataSource.saveAll(list)
     }
 
+    suspend fun delete(item: Entity, remote: Boolean, local: Boolean) = withContext(Dispatchers.IO) {
+        if (remote) {
+            remoteDataSource.remove(item)
+        }
+
+        if(local){
+            localDataSource.remove(item)
+        }
+    }
+
     suspend fun save(item: Entity) = withContext(Dispatchers.IO) {
         //todo cache network logic
         localDataSource.save(item)
