@@ -66,7 +66,7 @@ open class Repository<Entity : Any>(
                 try {
                     this@Repository.localDataSource.getAllAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response = it
+                        response.result = it
                     }, {
                         // No data available
                         response.error = it
@@ -81,12 +81,10 @@ open class Repository<Entity : Any>(
             launchSafe(::handeInternalError) {
                 try {
                     this@Repository.remoteDataSource.getAllAsync().getResultSafe({
+                        response.result = it
                         launchSafe(::handeDbSaveError) {
                             try {
-                                response = it
-                                it.result?.let {
-                                    this@Repository.localDataSource.saveAll(it)
-                                }
+                                this@Repository.localDataSource.saveAll(it)
                             } catch (e: Exception) {
                                 handeDbSaveError(e)
                             }
@@ -125,7 +123,7 @@ open class Repository<Entity : Any>(
                 try {
                     this@Repository.localDataSource.getOneAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response = it
+                        response.result = it
                     }, {
                         // No data available
                         response.error = it
@@ -140,12 +138,10 @@ open class Repository<Entity : Any>(
             launchSafe(::handeInternalError) {
                 try {
                     this@Repository.remoteDataSource.getOneAsync().getResultSafe({
+                        response.result = it
                         launchSafe(::handeDbSaveError) {
                             try {
-                                response = it
-                                it.result?.let {
-                                    this@Repository.localDataSource.save(it)
-                                }
+                                this@Repository.localDataSource.save(it)
                             } catch (e: Exception) {
                                 handeDbSaveError(e)
                             }

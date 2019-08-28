@@ -9,10 +9,11 @@ import com.core.repository.repository.DataSourceError
 import com.core.repository.repository.IErrorHandler
 import retrofit2.Response
 
+
 class DataSourceResponse<T> {
     var result: T? = null
     var isSuccessful: Boolean = true
-    var error: DataSourceError? = null
+    var error: DataSourceError<T>? = null
 
     fun convertToDataSource(responseAPI: Response<T>): DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
@@ -24,7 +25,7 @@ class DataSourceResponse<T> {
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
         isSuccessful = false
-        error = DataSourceError(code, message, serverError)
+        error = DataSourceError(code, message, serverError, null)
         return this
     }
 
@@ -34,60 +35,19 @@ class DataSourceResponse<T> {
     }
 
     fun getResultSafe(
-        resultSuccessful: (DataSourceResponse<T>) -> Unit,
-        resultUnsuccessful: (DataSourceError) -> Unit,
+        resultSuccessful: (T) -> Unit,
+        resultUnsuccessful: (DataSourceError<T>) -> Unit,
         resultIsNull: (Int) -> Unit = {},
         errorIsNull: (Int) -> Unit = {}
     ) {
         if (isSuccessful) {
             result?.let {
-                resultSuccessful(this)
-            } ?: let {
-                //todo integrate base error
-                resultIsNull(-1)
-            }
+                resultSuccessful(it)
+            } ?: resultIsNull(-1)
         } else {
             error?.let {
                 resultUnsuccessful(it)
-            } ?: let {
-                //todo integrate base error
-                errorIsNull(-1)
-            }
+            } ?: errorIsNull(-1)
         }
     }
 }
-
-class ResponseLiveData<T : Any> : MutableLiveData<DataSourceResponse<T>>() {
-    fun observe(
-        owner: LifecycleOwner,
-        success: Success<T>,
-        error: Error,
-        errorHandler: IErrorHandler
-    ) {
-        val lifecycleOwner = (owner as? Fragment)?.viewLifecycleOwner ?: owner
-        super.observe(lifecycleOwner, ResponseObserver(success, error, errorHandler))
-    }
-}
-
-class ResponseObserver<T : Any>(
-    private val success: Success<T>,
-    private val error: Error,
-    private val errorHandler: IErrorHandler
-) : Observer<DataSourceResponse<T>> {
-    override fun onChanged(response: DataSourceResponse<T>?) {
-        response?.let {
-            if (response.isSuccessful) {
-                success(response)
-            } else {
-                response.error?.let {
-                    error.invoke(response.error!!)
-                    errorHandler.handleServerError(response.error!!.errorCode)
-                }
-            }
-        }
-    }
-}
-
-typealias Success<T> = (data: DataSourceResponse<T>) -> Unit
-
-typealias Error = (error: DataSourceError) -> Unit
