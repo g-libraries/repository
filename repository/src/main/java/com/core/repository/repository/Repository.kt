@@ -78,6 +78,8 @@ open class Repository<Entity : Any>(
 
             send(response)
 
+            response = DataSourceResponse()
+
             launchSafe(::handeInternalError) {
                 try {
                     this@Repository.remoteDataSource.getAllAsync().getResultSafe({
@@ -134,6 +136,8 @@ open class Repository<Entity : Any>(
             }.join()
 
             send(response)
+
+            response = DataSourceResponse()
 
             launchSafe(::handeInternalError) {
                 try {
