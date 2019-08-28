@@ -1,9 +1,6 @@
 package com.core.repository.database
 
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.RawQuery
+import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteQuery
 import io.reactivex.Flowable
 import io.reactivex.Observable
