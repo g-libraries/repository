@@ -66,10 +66,10 @@ open class Repository<Entity : Any>(
                 try {
                     this@Repository.localDataSource.getAllAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response.result = it.result
+                        response = it
                     }, {
                         // No data available
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                        response.error = it
                     })
                 } catch (e: Exception) {
                     handeDbError(e)
@@ -80,11 +80,10 @@ open class Repository<Entity : Any>(
 
             launchSafe(::handeInternalError) {
                 try {
-                    response = this@Repository.remoteDataSource.getAllAsync()
-
-                    response.getResultSafe({
+                    this@Repository.remoteDataSource.getAllAsync().getResultSafe({
                         launchSafe(::handeDbSaveError) {
                             try {
+                                response = it
                                 it.result?.let {
                                     this@Repository.localDataSource.saveAll(it)
                                 }
@@ -93,7 +92,7 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        response.error = it
                     })
                 } catch (e: Exception) {
                     handeInternalError(e)
@@ -126,10 +125,10 @@ open class Repository<Entity : Any>(
                 try {
                     this@Repository.localDataSource.getOneAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response.result = it.result
+                        response = it
                     }, {
                         // No data available
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", false)
+                        response.error = it
                     })
                 } catch (e: Exception) {
                     handeDbError(e)
@@ -140,11 +139,10 @@ open class Repository<Entity : Any>(
 
             launchSafe(::handeInternalError) {
                 try {
-                    response = this@Repository.remoteDataSource.getOneAsync()
-
-                    response.getResultSafe({
+                    this@Repository.remoteDataSource.getOneAsync().getResultSafe({
                         launchSafe(::handeDbSaveError) {
                             try {
+                                response = it
                                 it.result?.let {
                                     this@Repository.localDataSource.save(it)
                                 }
@@ -153,7 +151,7 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.unSuccessful(-1, "dbError : ${it.errorMessage}", true)
+                        response.error = it
                     })
                 } catch (e: Exception) {
                     handeInternalError(e)
