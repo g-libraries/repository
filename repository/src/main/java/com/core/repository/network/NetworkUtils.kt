@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 fun isOnline(context: Context): Boolean {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -20,6 +21,7 @@ fun CoroutineScope.launchSafe(
     onSuccess: suspend () -> Unit
 ): Job {
     val handler = CoroutineExceptionHandler { _, throwable ->
+        Timber.e(throwable)
         //todo handle other exceptions
         when (throwable) {
             is NoConnectivityException -> onError(throwable)
