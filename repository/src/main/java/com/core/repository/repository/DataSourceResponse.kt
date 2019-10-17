@@ -8,6 +8,7 @@ import androidx.lifecycle.Observer
 import com.core.repository.repository.DataSourceError
 import com.core.repository.repository.IErrorHandler
 import retrofit2.Response
+import timber.log.Timber
 
 
 class DataSourceResponse<T> {
@@ -46,6 +47,7 @@ class DataSourceResponse<T> {
             } ?: resultIsNull(-1)
         } else {
             error?.let {
+                Timber.e(it.throwable)
                 resultUnsuccessful(it)
             } ?: errorIsNull(-1)
         }
