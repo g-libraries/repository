@@ -4,23 +4,23 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 
-class ResponseErrorLiveData<T> : MutableLiveData<DataSourceError<T>>() {
+class ResponseErrorLiveData : MutableLiveData<DataSourceError>() {
     fun observe(
         owner: LifecycleOwner,
         error: (String) -> Unit,
-        serverError: (DataSourceError<T>) -> Unit = {},
+        serverError: (DataSourceError) -> Unit = {},
         internalError: (Throwable) -> Unit = {}
     ) {
         super.observe(owner, ResponseErrorObserver(error, serverError, internalError))
     }
 }
 
-class ResponseErrorObserver<T>(
+class ResponseErrorObserver(
     val error: (String) -> Unit,
-    val serverError: (DataSourceError<T>) -> Unit = {},
+    val serverError: (DataSourceError) -> Unit = {},
     val internalError: (Throwable) -> Unit = {}
-) : Observer<DataSourceError<T>> {
-    override fun onChanged(t: DataSourceError<T>) {
+) : Observer<DataSourceError> {
+    override fun onChanged(t: DataSourceError) {
         if (t.serverError) {
             serverError.invoke(t)
         } else {

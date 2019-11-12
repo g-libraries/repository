@@ -14,7 +14,7 @@ import timber.log.Timber
 class DataSourceResponse<T> {
     var result: T? = null
     var isSuccessful: Boolean = true
-    var error: DataSourceError<T>? = null
+    var error: DataSourceError? = null
 
     fun convertToDataSource(responseAPI: Response<T>): DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
@@ -37,7 +37,7 @@ class DataSourceResponse<T> {
 
     fun getResultSafe(
         resultSuccessful: (T) -> Unit,
-        resultUnsuccessful: (DataSourceError<T>) -> Unit,
+        resultUnsuccessful: (DataSourceError) -> Unit,
         resultIsNull: (Int) -> Unit = {},
         errorIsNull: (Int) -> Unit = {}
     ) {
