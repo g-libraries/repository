@@ -9,6 +9,7 @@ import com.core.repository.repository.DataSourceError
 import com.core.repository.repository.IErrorHandler
 import retrofit2.Response
 import timber.log.Timber
+import com.google.gson.Gson
 
 
 class DataSourceResponse<T> {
@@ -20,13 +21,22 @@ class DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
             successful(responseAPI.body()!!)
         } else {
-            unSuccessful(responseAPI.code(), responseAPI.message(), true)
+            val dataSourceError = Gson().fromJson(responseAPI.errorBody()?.charStream(), DataSourceError::class.java)
+
+            unSuccessful(dataSourceError)
         }
     }
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
         isSuccessful = false
         error = DataSourceError(code, message, serverError, null)
+        return this
+    }
+
+
+    fun unSuccessful(dataSourceError: DataSourceError): DataSourceResponse<T> {
+        isSuccessful = false
+        error = dataSourceError
         return this
     }
 
