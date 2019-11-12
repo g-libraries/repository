@@ -8,7 +8,7 @@ class ResponseErrorLiveData<T> : MutableLiveData<DataSourceError<T>>() {
     fun observe(
         owner: LifecycleOwner,
         error: (String) -> Unit,
-        serverError: (Int) -> Unit = {},
+        serverError: (DataSourceError<T>) -> Unit = {},
         internalError: (Throwable) -> Unit = {}
     ) {
         super.observe(owner, ResponseErrorObserver(error, serverError, internalError))
@@ -17,12 +17,12 @@ class ResponseErrorLiveData<T> : MutableLiveData<DataSourceError<T>>() {
 
 class ResponseErrorObserver<T>(
     val error: (String) -> Unit,
-    val serverError: (Int) -> Unit = {},
+    val serverError: (DataSourceError<T>) -> Unit = {},
     val internalError: (Throwable) -> Unit = {}
 ) : Observer<DataSourceError<T>> {
     override fun onChanged(t: DataSourceError<T>) {
         if (t.serverError) {
-            serverError.invoke(t.errorCode)
+            serverError.invoke(t)
         } else {
             t.throwable?.let {
                 internalError.invoke(it)
