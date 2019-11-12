@@ -21,9 +21,10 @@ class DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
             successful(responseAPI.body()!!)
         } else {
-            val dataSourceError = Gson().fromJson(responseAPI.errorBody()?.charStream(), DataSourceError::class.java)
+            val dataSourceError =
+                Gson().fromJson(responseAPI.errorBody()?.charStream(), DataSourceError::class.java)
 
-            unSuccessful(dataSourceError)
+            unSuccessful(dataSourceError, true)
         }
     }
 
@@ -34,8 +35,12 @@ class DataSourceResponse<T> {
     }
 
 
-    fun unSuccessful(dataSourceError: DataSourceError): DataSourceResponse<T> {
+    fun unSuccessful(
+        dataSourceError: DataSourceError,
+        serverError: Boolean
+    ): DataSourceResponse<T> {
         isSuccessful = false
+        dataSourceError.serverError = serverError
         error = dataSourceError
         return this
     }
