@@ -1,24 +1,12 @@
 package com.core.repository.repository
 
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
 import com.core.repository.database.DataSource
 import com.core.repository.network.launchSafe
-import io.reactivex.Flowable
-import io.reactivex.Observable
-import io.reactivex.Single
-import io.reactivex.subjects.BehaviorSubject
-import io.reactivex.subjects.PublishSubject
-import io.reactivex.subjects.ReplaySubject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
-import org.intellij.lang.annotations.Flow
-import org.w3c.dom.Entity
 import timber.log.Timber
 import java.lang.Exception
-import java.util.function.Consumer
-import java.util.function.Function
 
 /**
  *
@@ -50,7 +38,8 @@ open class Repository<Entity : Any>(
 
             //Handle db error
             fun handeDbError(throwable: Throwable) {
-                response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+                Timber.e(throwable)
+                response.unSuccessful(-1, "Unexpected error", false)
             }
 
             fun handeDbSaveError(throwable: Throwable) {
@@ -58,21 +47,22 @@ open class Repository<Entity : Any>(
             }
 
             //Handle response obtain error
-            fun handeInternalError(throwable: Throwable) {
-                response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
+            fun handleInternalError(throwable: Throwable) {
+                Timber.e(throwable)
+                response.unSuccessful(-1, "Unexpected error", true)
             }
 
             launchSafe(::handeDbError) {
                 try {
                     this@Repository.localDataSource.getAllAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response.result = it
+                        response.successful(it)
                     }, {
                         // No data available
-                        response.error = it
+                        response.unSuccessful(it, false)
                     })
                 } catch (e: Exception) {
-                    handeDbError(e)
+                    handleInternalError(e)
                 }
             }.join()
 
@@ -80,10 +70,10 @@ open class Repository<Entity : Any>(
 
             response = DataSourceResponse()
 
-            launchSafe(::handeInternalError) {
+            launchSafe(::handleInternalError) {
                 try {
                     this@Repository.remoteDataSource.getAllAsync().getResultSafe({
-                        response.result = it
+                        response.successful(it)
                         launchSafe(::handeDbSaveError) {
                             try {
                                 this@Repository.localDataSource.saveAll(it)
@@ -92,10 +82,10 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.error = it
+                        response.unSuccessful(it, true)
                     })
                 } catch (e: Exception) {
-                    handeInternalError(e)
+                    handleInternalError(e)
                 }
             }.join()
 
@@ -108,7 +98,8 @@ open class Repository<Entity : Any>(
 
             //Handle db error
             fun handeDbError(throwable: Throwable) {
-                response.unSuccessful(-1, "dbError : ${throwable.message}", false)
+                Timber.e(throwable)
+                response.unSuccessful(-1, "Unexpected error", false)
             }
 
             fun handeDbSaveError(throwable: Throwable) {
@@ -117,17 +108,18 @@ open class Repository<Entity : Any>(
 
             //Handle response obtain error
             fun handeInternalError(throwable: Throwable) {
-                response.unSuccessful(-1, "response obtain error : ${throwable.message}", true)
+                Timber.e(throwable)
+                response.unSuccessful(-1, "Unexpected error", true)
             }
 
             launchSafe(::handeDbError) {
                 try {
                     this@Repository.localDataSource.getOneAsync().getResultSafe({
                         //  Data from local data source with server error
-                        response.result = it
+                        response.successful(it)
                     }, {
                         // No data available
-                        response.error = it
+                        response.unSuccessful(it, true)
                     })
                 } catch (e: Exception) {
                     handeDbError(e)
@@ -141,7 +133,7 @@ open class Repository<Entity : Any>(
             launchSafe(::handeInternalError) {
                 try {
                     this@Repository.remoteDataSource.getOneAsync().getResultSafe({
-                        response.result = it
+                        response.successful(it)
                         launchSafe(::handeDbSaveError) {
                             try {
                                 this@Repository.localDataSource.save(it)
@@ -150,7 +142,7 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.error = it
+                        response.unSuccessful(it, true)
                     })
                 } catch (e: Exception) {
                     handeInternalError(e)
@@ -160,10 +152,16 @@ open class Repository<Entity : Any>(
             send(response)
         }
 
-    suspend fun saveAll(list: List<Entity>) = withContext(Dispatchers.IO) {
-        //todo cache network logic
-        localDataSource.saveAll(list)
-    }
+    suspend fun saveAll(list: List<Entity>, remote: Boolean, local: Boolean) =
+        withContext(Dispatchers.IO) {
+            if (remote) {
+                remoteDataSource.saveAll(list)
+            }
+
+            if (local) {
+                localDataSource.saveAll(list)
+            }
+        }
 
     suspend fun delete(item: Entity, remote: Boolean, local: Boolean) =
         withContext(Dispatchers.IO) {
@@ -176,9 +174,14 @@ open class Repository<Entity : Any>(
             }
         }
 
-    suspend fun save(item: Entity) = withContext(Dispatchers.IO) {
-        //todo cache network logic
-        localDataSource.save(item)
+    suspend fun save(item: Entity, remote: Boolean, local: Boolean) = withContext(Dispatchers.IO) {
+        if (remote) {
+            remoteDataSource.save(item)
+        }
+
+        if (local) {
+            localDataSource.save(item)
+        }
     }
 
 }
