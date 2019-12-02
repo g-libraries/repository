@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">repository</string>
+    <string name="error_default">Unexpected error</string>
+    <string name="no_internet_message">No Internet </string>
 </resources>

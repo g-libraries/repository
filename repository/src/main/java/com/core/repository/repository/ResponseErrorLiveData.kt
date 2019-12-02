@@ -3,8 +3,9 @@ package com.core.repository.repository
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import com.core.base.usecases.Event
 
-class ResponseErrorLiveData : MutableLiveData<DataSourceError>() {
+class ResponseErrorLiveData : MutableLiveData<Event<DataSourceError>>() {
     fun observe(
         owner: LifecycleOwner,
         error: (String) -> Unit,
@@ -19,16 +20,18 @@ class ResponseErrorObserver(
     val error: (String) -> Unit,
     val serverError: (DataSourceError) -> Unit = {},
     val internalError: (Throwable) -> Unit = {}
-) : Observer<DataSourceError> {
-    override fun onChanged(t: DataSourceError) {
-        if (t.serverError) {
-            serverError.invoke(t)
-        } else {
-            t.throwable?.let {
-                internalError.invoke(it)
+) : Observer<Event<DataSourceError>> {
+    override fun onChanged(event: Event<DataSourceError>) {
+        event.getContentIfNotHandled()?.let { content ->
+            if (content.serverError) {
+                serverError.invoke(content)
+            } else {
+                content.throwable?.let {
+                    internalError.invoke(it)
+                }
             }
-        }
 
-        error.invoke(t.errorMessage)
+            error.invoke(content.errorMessage)
+        }
     }
 }
