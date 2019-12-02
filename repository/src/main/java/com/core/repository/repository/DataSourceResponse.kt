@@ -1,5 +1,6 @@
 package com.core.repository.repository
 
+import com.core.base.usecases.Event
 import retrofit2.Response
 import timber.log.Timber
 import com.google.gson.Gson
@@ -52,7 +53,7 @@ class DataSourceResponse<T> {
 
     fun getResultSafe(
         resultSuccessful: (T) -> Unit,
-        resultUnsuccessful: (DataSourceError) -> Unit,
+        resultUnsuccessful: (Event<DataSourceError>) -> Unit,
         resultIsNull: (Int) -> Unit = {},
         errorIsNull: (Int) -> Unit = {}
     ) {
@@ -63,7 +64,7 @@ class DataSourceResponse<T> {
         } else {
             error?.let {
                 Timber.e(it.throwable)
-                resultUnsuccessful(it)
+                resultUnsuccessful(Event(it))
             } ?: errorIsNull(-1)
         }
     }
