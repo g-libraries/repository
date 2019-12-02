@@ -59,7 +59,7 @@ open class Repository<Entity : Any>(
                         response.successful(it)
                     }, {
                         // No data available
-                        response.unSuccessful(it, false)
+                        response.unSuccessful(it.peekContent(), false)
                     })
                 } catch (e: Exception) {
                     handleInternalError(e)
@@ -82,7 +82,7 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.unSuccessful(it, true)
+                        response.unSuccessful(it.peekContent(), true)
                     })
                 } catch (e: Exception) {
                     handleInternalError(e)
@@ -119,7 +119,7 @@ open class Repository<Entity : Any>(
                         response.successful(it)
                     }, {
                         // No data available
-                        response.unSuccessful(it, true)
+                        response.unSuccessful(it.peekContent(), true)
                     })
                 } catch (e: Exception) {
                     handeDbError(e)
@@ -142,7 +142,7 @@ open class Repository<Entity : Any>(
                             }
                         }
                     }, {
-                        response.unSuccessful(it, true)
+                        response.unSuccessful(it.peekContent(), true)
                     })
                 } catch (e: Exception) {
                     handeInternalError(e)
