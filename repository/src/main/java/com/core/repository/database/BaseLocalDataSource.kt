@@ -42,15 +42,16 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
         db.delete(item)
     }
 
-    override suspend fun getAllAsync(): DataSourceResponse<List<Entity>> = withContext(Dispatchers.IO) {
-        val response = DataSourceResponse<List<Entity>>()
+    override suspend fun getAllAsync(): DataSourceResponse<List<Entity>> =
+        withContext(Dispatchers.IO) {
+            val response = DataSourceResponse<List<Entity>>()
 
-        try {
-            response.successful(db.rawQuery(sqlWhere(tableName, query().params)))
-        } catch (e: EmptyResultSetException) {
-            response.unSuccessful(-1, e.message!!, false)
+            try {
+                response.successful(db.rawQuery(sqlWhere(tableName, query().params)))
+            } catch (e: EmptyResultSetException) {
+                response.unSuccessful(-1, e.message!!, false)
+            }
         }
-    }
 
     override suspend fun getAllAsync(query: DataSource.Query<Entity>): DataSourceResponse<List<Entity>> =
         withContext(Dispatchers.IO) {
@@ -69,6 +70,8 @@ open class BaseLocalDataSource<Entity : Any, daoObject : BaseDao<Entity>> constr
         try {
             response.successful(db.rawQuery(sqlWhere(tableName, query().params)).last())
         } catch (e: EmptyResultSetException) {
+            response.unSuccessful(-1, e.message!!, false)
+        } catch (e: NoSuchElementException) {
             response.unSuccessful(-1, e.message!!, false)
         }
     }
