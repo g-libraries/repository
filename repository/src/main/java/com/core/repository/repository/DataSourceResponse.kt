@@ -25,12 +25,12 @@ class DataSourceResponse<T> {
                         throwParseException()
                     } else
                         Gson().fromJson(
-                            responseAPI.errorBody()?.charStream(),
+                            it,
                             DataSourceError::class.java
                         )
                 } ?: throwParseException()
             } catch (e: Exception) {
-                unSuccessful(-1, e.localizedMessage, false)
+                unSuccessful(-1, e.localizedMessage, true)
                 error?.throwable = e
                 error
             } as DataSourceError
@@ -41,7 +41,7 @@ class DataSourceResponse<T> {
 
     fun throwParseException() {
         Timber.e("Server error object was different")
-        throw ParseException(Resources.getSystem().getString(R.string.error_default))
+        throw ParseException("Server error")
     }
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
