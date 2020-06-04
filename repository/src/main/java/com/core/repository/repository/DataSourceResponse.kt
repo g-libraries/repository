@@ -1,6 +1,9 @@
 package com.core.repository.repository
 
+import android.content.res.Resources
 import com.core.base.usecases.Event
+import com.core.repository.R
+import com.core.repository.exceptions.ParseException
 import retrofit2.Response
 import timber.log.Timber
 import com.google.gson.Gson
@@ -15,19 +18,30 @@ class DataSourceResponse<T> {
         return if (responseAPI.isSuccessful) {
             successful(responseAPI.body()!!)
         } else {
-            val dataSourceError = try {
-                Gson().fromJson(
-                    responseAPI.errorBody()?.charStream(),
-                    DataSourceError::class.java
-                )
+            val dataSourceError: DataSourceError = try {
+                responseAPI.errorBody()?.string()?.let {
+                    //Checking for errors field. If no "errors" throw ParseException
+                    if (!it.contains("errors")) {
+                        throwParseException()
+                    } else
+                        Gson().fromJson(
+                            responseAPI.errorBody()?.charStream(),
+                            DataSourceError::class.java
+                        )
+                } ?: throwParseException()
             } catch (e: Exception) {
                 unSuccessful(-1, e.localizedMessage, false)
                 error?.throwable = e
                 error
-            }
+            } as DataSourceError
 
-            unSuccessful(dataSourceError!!, true)
+            unSuccessful(dataSourceError, true)
         }
+    }
+
+    fun throwParseException() {
+        Timber.e("Server error object was different")
+        throw ParseException(Resources.getSystem().getString(R.string.error_default))
     }
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): DataSourceResponse<T> {
