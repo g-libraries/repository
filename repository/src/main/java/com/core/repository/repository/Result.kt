@@ -10,7 +10,7 @@ import com.google.gson.Gson
 
 sealed class Result<out R> {
 
-    data class Success<T>(val data: T) : Result<T>()
+    data class Success<out T>(val data: T) : Result<T>()
     data class Error(val dataSourceError: DataSourceError) : Result<Nothing>()
     object Loading : Result<Nothing>()
 
@@ -19,6 +19,24 @@ sealed class Result<out R> {
             is Success<*> -> "Success[data=$data]"
             is Error -> "Error[exception=$dataSourceError]"
             Loading -> "Loading"
+        }
+    }
+
+    fun check(
+        loading: () -> Nothing,
+        resultSuccessful: (R) -> Nothing,
+        resultUnsuccessful: (Event<DataSourceError>) -> Nothing,
+    ) {
+        when (this) {
+            is Loading -> {
+                loading.invoke()
+            }
+            is Success -> {
+                resultSuccessful.invoke(data)
+            }
+            is Error -> {
+                resultUnsuccessful.invoke(Event(dataSourceError))
+            }
         }
     }
 }
