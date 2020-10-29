@@ -21,6 +21,30 @@ sealed class Result<T> {
             Loading -> "Loading"
         }
     }
+}
+
+fun <T : Any> Response<T>.convert() {
+    fun throwParseException() {
+        Timber.e("Server error object was different")
+        throw ParseException("Server error")
+    }
+
+    fun unSuccessful(code: Int, message: String, serverError: Boolean): Result.Error {
+        return Result.Error(DataSourceError(code, message, serverError, null))
+    }
+
+    fun unSuccessful(
+        dataSourceError: DataSourceError,
+        serverError: Boolean
+    ): Result.Error {
+        dataSourceError.serverError = serverError
+
+        return Result.Error(dataSourceError)
+    }
+
+    fun successful(body: T): Result<T> {
+        return Result.Success(body)
+    }
 
     fun convert(responseAPI: Response<T>) {
         if (responseAPI.isSuccessful) {
@@ -45,25 +69,4 @@ sealed class Result<T> {
         }
     }
 
-    fun throwParseException() {
-        Timber.e("Server error object was different")
-        throw ParseException("Server error")
-    }
-
-    fun unSuccessful(code: Int, message: String, serverError: Boolean): Error {
-        return Error(DataSourceError(code, message, serverError, null))
-    }
-
-    fun unSuccessful(
-        dataSourceError: DataSourceError,
-        serverError: Boolean
-    ): Error {
-        dataSourceError.serverError = serverError
-
-        return Error(dataSourceError)
-    }
-
-    private fun successful(body: T): Result<T> {
-        return Success(body)
-    }
 }
