@@ -8,10 +8,10 @@ import retrofit2.Response
 import timber.log.Timber
 import com.google.gson.Gson
 
-sealed class Result<T> {
+sealed class Result<out R> {
 
     data class Success<T>(val data: T) : Result<T>()
-    data class Error(val dataSourceError: DataSourceError) : Result<DataSourceError>()
+    data class Error(val dataSourceError: DataSourceError) : Result<Nothing>()
     object Loading : Result<Nothing>()
 
     override fun toString(): String {
@@ -23,7 +23,7 @@ sealed class Result<T> {
     }
 }
 
-fun <T : Any> Response<T>.convert() {
+fun <T : Any> Response<T>.convert(): Result<T> {
     fun throwParseException() {
         Timber.e("Server error object was different")
         throw ParseException("Server error")
@@ -42,31 +42,24 @@ fun <T : Any> Response<T>.convert() {
         return Result.Error(dataSourceError)
     }
 
-    fun successful(body: T): Result<T> {
-        return Result.Success(body)
+    return if (this.isSuccessful) {
+        Result.Success(this.body()!!)
+    } else {
+        val dataSourceError: DataSourceError = try {
+            this.errorBody()?.string()?.let {
+                //Checking for errors field. If no "errors" throw ParseException
+                if (!it.contains("errors")) {
+                    throwParseException()
+                } else
+                    Gson().fromJson(
+                        it,
+                        DataSourceError::class.java
+                    )
+            } ?: throwParseException()
+        } catch (e: Exception) {
+            unSuccessful(-1, e.localizedMessage, true)
+        } as DataSourceError
+
+        unSuccessful(dataSourceError, true)
     }
-
-    fun convert(responseAPI: Response<T>) {
-        if (responseAPI.isSuccessful) {
-            successful(responseAPI.body()!!)
-        } else {
-            val dataSourceError: DataSourceError = try {
-                responseAPI.errorBody()?.string()?.let {
-                    //Checking for errors field. If no "errors" throw ParseException
-                    if (!it.contains("errors")) {
-                        throwParseException()
-                    } else
-                        Gson().fromJson(
-                            it,
-                            DataSourceError::class.java
-                        )
-                } ?: throwParseException()
-            } catch (e: Exception) {
-                unSuccessful(-1, e.localizedMessage, true)
-            } as DataSourceError
-
-            unSuccessful(dataSourceError, true)
-        }
-    }
-
 }
