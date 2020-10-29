@@ -25,7 +25,7 @@ sealed class Result<out R> {
     fun check(
         loading: () -> Nothing,
         resultSuccessful: (R) -> Nothing,
-        resultUnsuccessful: (Event<DataSourceError>) -> Nothing,
+        resultUnsuccessful: (Event<DataSourceError>) -> Nothing
     ) {
         when (this) {
             is Loading -> {
