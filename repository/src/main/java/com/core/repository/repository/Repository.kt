@@ -30,8 +30,6 @@ open class Repository<Entity : Any>(
     private val remoteDataSource: DataSource<Entity>,
     private val localDataSource: DataSource<Entity>
 ) {
-
-
     suspend fun getAllAsync(scope: CoroutineScope): ReceiveChannel<DataSourceResponse<List<Entity>>> =
         scope.produce {
             var response = DataSourceResponse<List<Entity>>()
