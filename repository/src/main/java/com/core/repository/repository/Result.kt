@@ -81,3 +81,21 @@ fun <T : Any> Response<T>.convert(): Result<T> {
         unSuccessful(dataSourceError, true)
     }
 }
+
+fun <T, R> Result<T>.map(map: (T) -> R): Result<R> {
+    return when (this) {
+        is Result.Success -> {
+            Result.Success(map(this.data))
+        }
+        is Result.Loading -> {
+            Result.Loading
+        }
+        is Result.Error -> {
+            Result.Error(this.dataSourceError)
+        }
+    }
+}
+
+fun <T : Any, R> Response<T>.convertAndMap(map: (T) -> R): Result<R> {
+    return this.convert().map(map)
+}
