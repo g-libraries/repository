@@ -42,10 +42,7 @@ sealed class Result<out R> {
 }
 
 fun <T : Any> Response<T>.convert(): Result<T> {
-    fun throwParseException() {
-        Timber.e("Server error object was different")
-        throw ParseException("Server error")
-    }
+    fun createParseError() = DataSourceError(-1, false, Throwable("Parsing error"))
 
     fun unSuccessful(code: Int, message: String, serverError: Boolean): Result.Error {
         return Result.Error(DataSourceError(code, message, serverError, null))
@@ -67,13 +64,13 @@ fun <T : Any> Response<T>.convert(): Result<T> {
             this.errorBody()?.string()?.let {
                 //Checking for errors field. If no "errors" throw ParseException
                 if (!it.contains("errors")) {
-                    throwParseException()
+                    createParseError()
                 } else
                     Gson().fromJson(
                         it,
                         DataSourceError::class.java
                     )
-            } ?: throwParseException()
+            } ?: createParseError()
         } catch (e: Exception) {
             unSuccessful(-1, e.localizedMessage, true)
         } as DataSourceError
